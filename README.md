@@ -1,3 +1,5 @@
 # Projects
-1. Bank
-2. Web Scrapping
+1. Number Guessing Game
+2. Rock Paper Scisosor
+3. Bank
+4. Web Scrapping
