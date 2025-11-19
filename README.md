@@ -1,2 +1,1 @@
-# University
-University Project
+# Projects
