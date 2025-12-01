@@ -18,7 +18,7 @@ When the program starts, it automatically:
 
 ### How to Navigate the Program
 
-* The user only needs to type simple commands (1–6 or names like “deposit”, “create”).
+* The user only needs to type simple commands in **lowercase**(1–6 or names like “deposit”, “create”).
 * Incorrect inputs are handled with warnings.
 * After each operation, the program automatically returns to the main menu.
 
