@@ -2,9 +2,7 @@
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
-#include <sys/stat.h>
-#include <unistd.h>
-//#include <direct.h>
+#include <direct.h>
 
 // Stores the imp information about the Account 
 typedef struct account_details
@@ -45,7 +43,7 @@ void make_database()
     // Makes Database Directory in current directory
     char database_path[1024];
     snprintf(database_path, sizeof(database_path), "%s/Database", current_working_directory()); // current_working_directory/Database ----> database_path
-    mkdir(database_path, 0755);  // Create database folder
+    mkdir(database_path);  // Create database folder
 
 
     // Makes index.txt file - Same principles as database folder
@@ -857,17 +855,28 @@ void Remittance()
     fscanf(recieveaccount, "%f", &reciever_info.Balance);
     fscanf(recieveaccount, "%d", &reciever_info.acc_no);
     fclose(recieveaccount);
+    
+
     // Account Balance Charges
     if (sender_info.acc_type == 1 && reciever_info.acc_type == 2)
     {
-        sender_info.Balance = sender_info.Balance - (amount_withdraw * 1.02);
+        sender_info.Balance -= amount_withdraw + (amount_withdraw * 0.02);
     }
     else if (sender_info.acc_type == 2 && reciever_info.acc_type == 1)
     {
-        sender_info.Balance = sender_info.Balance - (amount_withdraw * 1.03);
+        sender_info.Balance -= amount_withdraw + (amount_withdraw * 0.03);
     }
-    reciever_info.Balance += amount_withdraw;
+    else if (sender_info.acc_type == 2 && reciever_info.acc_type == 2)
+    {
+        sender_info.Balance -= amount_withdraw; // no fee
+    }
+    else if (sender_info.acc_type == 1 && reciever_info.acc_type == 1)
+    {
+        sender_info.Balance -= amount_withdraw; // no fee
+    }
 
+    // Reciever Account balance update
+    reciever_info.Balance += amount_withdraw;
 
     // Sender File write
     FILE *send_write;
@@ -882,7 +891,7 @@ void Remittance()
 
     // Reciever File Write
     char reciever_path[1024];
-    snprintf(reciever_path, 1024, "%s/Database/%s.txt", current_working_directory(), reciever_account);
+    snprintf(reciever_path, 1024, "%s/Database/%s.txt", current_directory, reciever_account);
     FILE *recieve_write;
     recieve_write = fopen(reciever_path, "w");
     fprintf(recieve_write, "%s\n", reciever_info.name);
