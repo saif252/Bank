@@ -9,7 +9,7 @@ typedef struct account_details
 {
     char name[1024];
     int ID;
-    int acc_type; // 1 - Saving, 2 - Current Should have used enum but dont know how to use enums
+    int acc_type; // 1 - Saving, 2 - Current // Should have used enum but really used to enums for now,
     int PIN;
     float Balance;
     int acc_no;
@@ -29,7 +29,6 @@ void path_builder(char *Store, const char *file_open)
     snprintf(Store, 1024, "%s/Database/%s", current_working_directory(), file_open);
 }
 
-// Function to clear input buffer
 void clear_input() {
     int clear;
     while ((clear = getchar()) != '\n' && clear != EOF);
@@ -47,7 +46,7 @@ void make_database()
     mkdir(database_path);  // Create database folder
 
 
-    // Makes index.txt file - Same principles as database folder
+    // Makes index.txt file - Same thing as database folder
     char Indexfile_path[1024];
     path_builder(Indexfile_path, "Index.txt");
 
@@ -81,7 +80,7 @@ void show_session_info()
     int acc_count = 0;
     if (Indexptr == NULL)
     {
-        // File doesn't exist yet → no accounts
+        // File doesn't exist yet, then no accounts
         acc_count = 0;
     }
     else
@@ -128,20 +127,20 @@ void Create()
 
     // Name
     int name_valid = 0;
-    while (!name_valid)
+    while(!name_valid)
     {
         printf("Enter Name: ");
         fgets(account.name, sizeof(account.name), stdin); // Takes input from User even spaces
         account.name[strcspn(account.name, "\n")] = '\0'; //  Removes the newline character
-        if (strlen(account.name) > 0 && strspn(account.name, " ") != strlen(account.name)) // Checks the length of the name is greater than 0 and not only spaces
+        if (strlen(account.name) > 0 && strspn(account.name, " ") != strlen(account.name)) // checks the length of name to ensure it has atleast one character and not white spaces
         {
             name_valid = 1;
         }
         else
         {
-            printf("Cant Be NUll Input\n");
+            printf("Cant be NULL Character\n");
         }
-    }
+    } 
     
 
     // ID
@@ -277,7 +276,6 @@ void Create()
     printf("------------------------------------\n");
 }
 
-// Helper Function to Validate Pin
 int valid_PIN(const char *account_no)
 {
     acc_details account;
@@ -731,201 +729,230 @@ void Remittance()
 {
     acc_details sender_info;
     acc_details reciever_info;
+
     printf("\n            Remittance        \n");
     printf("--------------------------------\n");
     printf("Select Sender Account: \n");
+
     char current_directory[1024];
     strcpy(current_directory, current_working_directory());
 
-    // Open Index.txt
+    /* Read all accounts from Index.txt */
     char Indexfile_read_path[1024];
     path_builder(Indexfile_read_path, "Index.txt");
-    
-    char file_end[16]; // Reads the File for end
-    char existing_account[1024][16]; // 2D array to store 1024 Accounts of 7 Characters + Null terminator
+
+    char line[32];
+    char existing_account[1024][16];
     int account_count = 0;
 
-    FILE *index_ptr;
-    index_ptr = fopen(Indexfile_read_path, "r");
-
-    // Loop to Read and Display all the current Acccount
-    while (fgets(file_end, sizeof(file_end), index_ptr) != NULL) // Runs until the Files is empty
+    FILE *index_ptr = fopen(Indexfile_read_path, "r");
+    if (!index_ptr)
     {
-        file_end[strcspn(file_end, "\n")] = 0; // Removes the newline Character
-        strcpy(existing_account[account_count], file_end);
+        printf("ERROR: Cannot open Index.txt\n");
+        return;
+    }
+
+    while (fgets(line, sizeof(line), index_ptr) != NULL)
+    {
+        line[strcspn(line, "\n")] = 0;
+        strcpy(existing_account[account_count], line);
         printf("%d. %s\n", account_count + 1, existing_account[account_count]);
         account_count++;
     }
     fclose(index_ptr);
+
     printf("--------------------------------\n");
 
-    // Continue Prompt to Enter Correct Account
-    int account_found0 = 0;
+    /* ------------------------------
+       SELECT SENDER ACCOUNT
+    -------------------------------- */
     char sender_account[16];
-    while (!account_found0)
+    int account_found = 0;
+
+    while (!account_found)
     {
         printf("Please Select Sender Account: ");
         scanf("%15s", sender_account);
 
-        for (int i = 0; i < account_count; i++) // Compares all the exisiting_account array
+        for (int i = 0; i < account_count; i++)
         {
-            if (strcmp(sender_account, existing_account[i]) == 0) // If the account matches; breaks
+            if (strcmp(sender_account, existing_account[i]) == 0)
             {
-                account_found0 = 1;
+                account_found = 1;
+                break;
             }
         }
-        if (!account_found0) // If didnt find account in existing_account array
-        {
+        if (!account_found)
             printf("Account Not Found\n");
-        }
+
         clear_input();
     }
-    char senderaccountpath[1024];
-    snprintf(senderaccountpath, 1024, "%s/Database/%s.txt", current_directory, sender_account);
 
-    FILE *sendaccount;
-    sendaccount = fopen(senderaccountpath, "r");
-    fgets(sender_info.name, sizeof(sender_info.name), sendaccount);
+    /* Read sender account data */
+    char sender_path[1024];
+    snprintf(sender_path, 1024, "%s/Database/%s.txt", current_directory, sender_account);
+
+    FILE *fp_sender = fopen(sender_path, "r");
+    if (!fp_sender)
+    {
+        printf("ERROR: Cannot open sender account file!\n");
+        return;
+    }
+
+    fgets(sender_info.name, sizeof(sender_info.name), fp_sender);
     sender_info.name[strcspn(sender_info.name, "\n")] = 0;
-    fscanf(sendaccount, "%d", &sender_info.ID);
-    fscanf(sendaccount, "%d", &sender_info.acc_type);
-    fscanf(sendaccount, "%d", &sender_info.PIN);
-    fscanf(sendaccount, "%f", &sender_info.Balance);
-    fscanf(sendaccount, "%d", &sender_info.acc_no);
-    fclose(sendaccount);
 
-    // Validate PIN
-    int user_PIN = valid_PIN(sender_account);
+    fscanf(fp_sender, "%d", &sender_info.ID);
+    fscanf(fp_sender, "%d", &sender_info.acc_type);
+    fscanf(fp_sender, "%d", &sender_info.PIN);
+    fscanf(fp_sender, "%f", &sender_info.Balance);
+    fscanf(fp_sender, "%d", &sender_info.acc_no);
+
+    fclose(fp_sender);
+
+    /* Validate PIN */
+    valid_PIN(sender_account);
+
     printf("--------------------------------\n");
-    printf("Available Balance: %.3f\n", sender_info.Balance);// Show Balance
+    printf("Available Balance: %.3f\n", sender_info.Balance);
     printf("--------------------------------\n");
 
-    // Loop to Ensure the amount is valid and has enough money to withdraw
-    int amount_valid = 0;
-    float amount_withdraw;
-    while(!amount_valid)
+    /* ------------------------------
+       SELECT RECEIVER ACCOUNT
+    -------------------------------- */
+    char reciever_account[16];
+    account_found = 0;
+
+    while (!account_found)
+    {
+        printf("Please Select Receiver Account: ");
+        scanf("%15s", reciever_account);
+
+        if (strcmp(sender_account, reciever_account) == 0)
+        {
+            printf("ERROR: Sender and Receiver cannot be the same.\n");
+            clear_input();
+            continue;
+        }
+
+        for (int i = 0; i < account_count; i++)
+        {
+            if (strcmp(reciever_account, existing_account[i]) == 0)
+            {
+                account_found = 1;
+                break;
+            }
+        }
+
+        if (!account_found)
+            printf("Account Not Found\n");
+
+        clear_input();
+    }
+
+    /* Read receiver account data */
+    char receiver_path[1024];
+    snprintf(receiver_path, 1024, "%s/Database/%s.txt", current_directory, reciever_account);
+
+    FILE *fp_receiver = fopen(receiver_path, "r");
+    if (!fp_receiver)
+    {
+        printf("ERROR: Cannot open receiver account file!\n");
+        return;
+    }
+
+    fgets(reciever_info.name, sizeof(reciever_info.name), fp_receiver);
+    reciever_info.name[strcspn(reciever_info.name, "\n")] = 0;
+
+    fscanf(fp_receiver, "%d", &reciever_info.ID);
+    fscanf(fp_receiver, "%d", &reciever_info.acc_type);
+    fscanf(fp_receiver, "%d", &reciever_info.PIN);
+    fscanf(fp_receiver, "%f", &reciever_info.Balance);
+    fscanf(fp_receiver, "%d", &reciever_info.acc_no);
+
+    fclose(fp_receiver);
+
+    /* ------------------------------
+       AMOUNT VALIDATION (after reading both accounts!)
+    -------------------------------- */
+    float amount, total_deduction;
+
+    while (1)
     {
         printf("Enter Amount to Send: ");
-        if (scanf("%f", &amount_withdraw) == 1)
+        if (scanf("%f", &amount) != 1)
         {
-            if (amount_withdraw > 0) // Valid the amount cant be negative
-            {
-                if (amount_withdraw <= sender_info.Balance) // Ensures the amount to withdraw is than the account balance
-                {
-                    amount_valid = 1;
-                }
-                else
-                {
-                    printf("Not Enough Balance\n");
-                }
-            }
-            else
-            {
-                printf("Amount Can't be Negative\n");
-            }
-            
+            printf("Enter Numbers Only.\n");
+            clear_input();
+            continue;
+        }
+
+        if (amount <= 0)
+        {
+            printf("Amount must be positive.\n");
+            continue;
+        }
+
+        /* Fee calculation */
+        if (sender_info.acc_type == 1 && reciever_info.acc_type == 2)
+            total_deduction = amount * 1.02; // Saving → Current = 2%
+        else if (sender_info.acc_type == 2 && reciever_info.acc_type == 1)
+            total_deduction = amount * 1.03; // Current → Saving = 3%
+        else
+            total_deduction = amount;        // Same type = no fee
+
+        if (total_deduction > sender_info.Balance)
+        {
+            printf("Not Enough Balance. Required: %.3f, Available: %.3f\n",
+                   total_deduction, sender_info.Balance);
         }
         else
         {
-            printf("Enter Numbers\n");
+            break; // Valid
         }
+
         clear_input();
     }
 
-    int account_found1 = 0;
-    char reciever_account[16];
-    while (!account_found1)
-    {
-        printf("Please Select Reciever Account: ");
-        scanf("%15s", reciever_account);
-        if (strcmp(sender_account, reciever_account) == 0)
-        {
-            printf("Cant be Same Account\n");
-            continue;
-        }
-        for (int i = 0; i < account_count; i++) // Compares all the exisiting_account array
-        {
-            if (strcmp(reciever_account, existing_account[i]) == 0) // If the account matches; breaks
-            {
-                account_found1 = 1;
-            }
-        }
-        if (!account_found1) // If didnt find account in existing_account array
-        {
-            printf("Account Not Found\n");
-        }
-        clear_input();
-    }
-    // Open reciever Account
-    char recieveaccountpath[1024];
-    snprintf(recieveaccountpath, 1024, "%s/Database/%s.txt", current_directory, reciever_account);
+    /* Apply deductions */
+    sender_info.Balance -= total_deduction;
+    reciever_info.Balance += amount;
 
-    FILE *recieveaccount;
-    recieveaccount = fopen(recieveaccountpath, "r");
-    fgets(reciever_info.name, sizeof(reciever_info.name), recieveaccount);
-    reciever_info.name[strcspn(reciever_info.name, "\n")] = '\0';
-    fscanf(recieveaccount, "%d", &reciever_info.ID);
-    fscanf(recieveaccount, "%d", &reciever_info.acc_type);
-    fscanf(recieveaccount, "%d", &reciever_info.PIN);
-    fscanf(recieveaccount, "%f", &reciever_info.Balance);
-    fscanf(recieveaccount, "%d", &reciever_info.acc_no);
-    fclose(recieveaccount);
-    
+    /* ------------------------------
+       WRITE UPDATED SENDER FILE
+    -------------------------------- */
+    fp_sender = fopen(sender_path, "w");
+    fprintf(fp_sender, "%s\n", sender_info.name);
+    fprintf(fp_sender, "%d\n", sender_info.ID);
+    fprintf(fp_sender, "%d\n", sender_info.acc_type);
+    fprintf(fp_sender, "%d\n", sender_info.PIN);
+    fprintf(fp_sender, "%.3f\n", sender_info.Balance);
+    fprintf(fp_sender, "%d\n", sender_info.acc_no);
+    fclose(fp_sender);
 
-    // Account Balance Charges
-    if (sender_info.acc_type == 1 && reciever_info.acc_type == 2)
-    {
-        sender_info.Balance -= amount_withdraw + (amount_withdraw * 0.02);
-    }
-    else if (sender_info.acc_type == 2 && reciever_info.acc_type == 1)
-    {
-        sender_info.Balance -= amount_withdraw + (amount_withdraw * 0.03);
-    }
-    else if (sender_info.acc_type == 2 && reciever_info.acc_type == 2)
-    {
-        sender_info.Balance -= amount_withdraw; // no fee
-    }
-    else if (sender_info.acc_type == 1 && reciever_info.acc_type == 1)
-    {
-        sender_info.Balance -= amount_withdraw; // no fee
-    }
+    /* ------------------------------
+       WRITE UPDATED RECEIVER FILE
+    -------------------------------- */
+    fp_receiver = fopen(receiver_path, "w");
+    fprintf(fp_receiver, "%s\n", reciever_info.name);
+    fprintf(fp_receiver, "%d\n", reciever_info.ID);
+    fprintf(fp_receiver, "%d\n", reciever_info.acc_type);
+    fprintf(fp_receiver, "%d\n", reciever_info.PIN);
+    fprintf(fp_receiver, "%.3f\n", reciever_info.Balance);
+    fprintf(fp_receiver, "%d\n", reciever_info.acc_no);
+    fclose(fp_receiver);
 
-    // Reciever Account balance update
-    reciever_info.Balance += amount_withdraw;
-
-    // Sender File write
-    FILE *send_write;
-    send_write = fopen(senderaccountpath, "w");
-    fprintf(send_write, "%s\n", sender_info.name);
-    fprintf(send_write, "%d\n",sender_info.ID);
-    fprintf(send_write, "%d\n",sender_info.acc_type);
-    fprintf(send_write, "%d\n",sender_info.PIN);
-    fprintf(send_write, "%.3f\n",sender_info.Balance);
-    fprintf(send_write, "%d\n",sender_info.acc_no);
-    fclose(send_write);
-
-    // Reciever File Write
-    char reciever_path[1024];
-    snprintf(reciever_path, 1024, "%s/Database/%s.txt", current_directory, reciever_account);
-    FILE *recieve_write;
-    recieve_write = fopen(reciever_path, "w");
-    fprintf(recieve_write, "%s\n", reciever_info.name);
-    fprintf(recieve_write, "%d\n",reciever_info.ID);
-    fprintf(recieve_write, "%d\n",reciever_info.acc_type);
-    fprintf(recieve_write, "%d\n",reciever_info.PIN);
-    fprintf(recieve_write, "%.3f\n",reciever_info.Balance);
-    fprintf(recieve_write, "%d\n",reciever_info.acc_no);
-    fclose(recieve_write);
-
+    /* ------------------------------
+       PRINT FINAL RESULT
+    -------------------------------- */
     printf("--------------------------------\n");
-    printf("        Sender Information:     \n");
-    printf("Name: %s\n", sender_info.name);
-    printf("Account: %d\n", sender_info.acc_no);
-    printf("Balance: %.3f\n", sender_info.Balance);
-    printf("        Reciever Information:     \n");
-    printf("Name: %s\n", reciever_info.name);
-    printf("Account: %d\n", reciever_info.acc_no);
-    printf("Balance: %.3f\n", reciever_info.Balance);
+    printf("       Transfer Successful\n");
+    printf("--------------------------------\n");
+    printf("Sender: %s (Acc: %d)\nBalance: %.3f\n",
+           sender_info.name, sender_info.acc_no, sender_info.Balance);
+
+    printf("Receiver: %s (Acc: %d)\nBalance: %.3f\n",
+           reciever_info.name, reciever_info.acc_no, reciever_info.Balance);
 }
 
 
